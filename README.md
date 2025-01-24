@@ -73,7 +73,7 @@ dbutils.fs.mount( source = "abfss://silver@<storage-account-name>.dfs.core.windo
 `configs = { "fs.azure.account.auth.type": "CustomAccessToken", "fs.azure.account.custom.token.provider.class": spark.conf.get("spark.databricks.passthrough.adls.gen2.tokenProviderClassName") } 
 dbutils.fs.mount( source = "abfss://gold@<storage-account-name>.dfs.core.windows.net/", mount_point = "/mnt/gold", extra_configs = configs )`
   
-- Configured a Bronze container for raw data, and created Silver and Gold containers to follow the medallion architecture.
+- Configured a Bronze container for raw data, and created Silver and Gold containers to follow the Lake House architecture.
 
 ### Bronze to Silver Transformation
 
