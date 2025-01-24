@@ -139,15 +139,17 @@ Go
 Create or Alter Proc CreateSQLserverlessView_Gold
 @ViewName nvchar(100)
 As
-Begin
-Declare @statement Varchar(max)
+Begin`
+
+`Declare @statement Varchar(max)
     Set @statement=N'Create or alter view' + @ViewName +' 
     As
     Select * from
     Openrowset( 
     bulk "https://goldcontainer + @ViewName + '/'", format="Delta"
-    ) as [result]
-Exec(@statement)
+    ) as [result]`
+    
+`Exec(@statement)
 End
 Go`
 
