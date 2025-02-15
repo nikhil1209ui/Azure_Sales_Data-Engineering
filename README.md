@@ -12,8 +12,10 @@
 
 - Created a new user login within the SQL Server database using SQL queries.This user was assigned specific credentials (username and password) and granted a db_datareader role for database access.
 
-  `CREATE LOGIN 'username' WITH PASSWORD = 'password'
-    create user 'username' for login 'username'`
+  ```sql
+  CREATE LOGIN 'username' WITH PASSWORD = 'password'
+    create user 'username' for login 'username'
+  ```
   
   <img width="400" alt="image" src="https://github.com/user-attachments/assets/853cf2f8-e112-45a8-ac1f-f434b845fe05">
 
@@ -38,11 +40,13 @@
     
 - Configure ADF Pipeline for Data Ingestion
   - Configured a Lookup activity to query all tables in the SalesLT schema from the AdventureWorksLT2017 database.
-    `SELECT s.name as schemaName
+    ```sql
+    SELECT s.name as schemaName
     t.name as tableName
     from sys,table t
     join sys,schema as s on t.schema_id = s.schema_id
-    when s.name = 'SaleLT'`
+    when s.name = 'SaleLT'
+    ```
     
   - Created a linked service for SQL Server, connected to the on-premises server through SHIR, and authenticated using Key Vault secrets.
     
@@ -64,14 +68,16 @@
 
 - Created a storage_mount notebook to mount data from Azure Data Lake Storage Gen2 to Databricks.
 
-`configs = { "fs.azure.account.auth.type": "CustomAccessToken", "fs.azure.account.custom.token.provider.class": spark.conf.get("spark.databricks.passthrough.adls.gen2.tokenProviderClassName") }
+```pyspark
+configs = { "fs.azure.account.auth.type": "CustomAccessToken", "fs.azure.account.custom.token.provider.class": spark.conf.get("spark.databricks.passthrough.adls.gen2.tokenProviderClassName") }
 dbutils.fs.mount( source = "abfss://bronze@<storage-account-name>.dfs.core.windows.net/", mount_point = "/mnt/bronze", extra_configs = configs )`
 
 `configs = { "fs.azure.account.auth.type": "CustomAccessToken", "fs.azure.account.custom.token.provider.class": spark.conf.get("spark.databricks.passthrough.adls.gen2.tokenProviderClassName") }
 dbutils.fs.mount( source = "abfss://silver@<storage-account-name>.dfs.core.windows.net/", mount_point = "/mnt/silver", extra_configs = configs )`
 
 `configs = { "fs.azure.account.auth.type": "CustomAccessToken", "fs.azure.account.custom.token.provider.class": spark.conf.get("spark.databricks.passthrough.adls.gen2.tokenProviderClassName") } 
-dbutils.fs.mount( source = "abfss://gold@<storage-account-name>.dfs.core.windows.net/", mount_point = "/mnt/gold", extra_configs = configs )`
+dbutils.fs.mount( source = "abfss://gold@<storage-account-name>.dfs.core.windows.net/", mount_point = "/mnt/gold", extra_configs = configs )
+```
   
 - Configured a Bronze container for raw data, and created Silver and Gold containers to follow the Lake House architecture.
 
@@ -81,7 +87,8 @@ dbutils.fs.mount( source = "abfss://gold@<storage-account-name>.dfs.core.windows
 - Since the source data was already relatively clean, minimal transformation was needed. The main transformation was converting datetime columns to date format.
 - Saved the transformed data in the Silver container in .delta format.
 
-`table_name = [] 
+```pyspark
+table_name = [] 
 for i in dbutils.fs.ls('/mnt/bronze/SalesLT/'): 
 table_name.append(i.name.split('/')[0])
 from pyspark.sql.functions import from_utc_timestamp, date_format from pyspark.sql.types import TimestampType
@@ -93,7 +100,8 @@ for col in column:
 if "Date" in col or "date" in col:
 df = df.withColumn(col, date_format(from_utc_timestamp(df[col].cast(TimestampType()), "UTC"), "yyyy-MM-dd"))
 output_path = '/mnt/silver/SalesLT/' + i + '/'
-df.write.format('delta').mode("overwrite").save(output_path)`
+df.write.format('delta').mode("overwrite").save(output_path)
+```
 
 ### Silver to Gold Transformation
 
@@ -101,12 +109,17 @@ df.write.format('delta').mode("overwrite").save(output_path)`
 - Renamed column names from PascalCase to snake_case to adhere to business naming conventions.
 - Stored the transformed data in the Gold container in .delta format.
 
-`table_names=[]
+```pyspark
+table_names=[]
 for i in dbutils.fs.ls("mnt/silver/SalesLt')
 table_names.append(i.name.split('/')[0])
-for name in table_name: path = '/mnt/silver/SalesLT/' + name print(path) df = spark.read.format('delta').load(path) # Get the list of column names column_names = df.columns for old_col_name in column_names: 
+for name in table_name: path = '/mnt/silver/SalesLT/' + name print(path) df = spark.read.format('delta').load(path)
+# Get the list of column names
+column_names = df.columns
+for old_col_name in column_names: 
 new_col_name = "_".join(["_" + char if char.isupper() and not old_col_name[i - 1].isupper() else char for i, char in enumerate(old_col_name)]).lstrip("_") 
-df = df.withColumnRenamed(old_col_name, new_col_name) output_path = '/mnt/gold/SalesLT/' + name + '/' df.write.format('delta').mode('overwrite').save(output_path)`
+df = df.withColumnRenamed(old_col_name, new_col_name) output_path = '/mnt/gold/SalesLT/' + name + '/' df.write.format('delta').mode('overwrite').save(output_path)
+```
 
 ### Automate Notebooks in ADF Pipeline
 
@@ -134,7 +147,8 @@ df = df.withColumnRenamed(old_col_name, new_col_name) output_path = '/mnt/gold/S
 - Copied the endpoint of the Synapse SQL database for later connections.
 - Created a view for the Gold container and a stored procedure to facilitate loading data into the Synapse SQL database.
 
-`Use gold_DB
+```sql
+Use gold_DB
 Go
 Create or Alter Proc CreateSQLserverlessView_Gold
 @ViewName nvchar(100)
@@ -151,7 +165,8 @@ Begin`
     
 `Exec(@statement)
 End
-Go`
+Go
+```
 
 ### Build Data Loading Pipeline in Azure Synapse
 
