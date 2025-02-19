@@ -113,12 +113,17 @@ df.write.format('delta').mode("overwrite").save(output_path)
 table_names=[]
 for i in dbutils.fs.ls("mnt/silver/SalesLt')
 table_names.append(i.name.split('/')[0])
-for name in table_name: path = '/mnt/silver/SalesLT/' + name print(path) df = spark.read.format('delta').load(path)
+for name in table_name:
+path = '/mnt/silver/SalesLT/' + name
+print(path)
+df = spark.read.format('delta').load(path)
 # Get the list of column names
 column_names = df.columns
 for old_col_name in column_names: 
 new_col_name = "_".join(["_" + char if char.isupper() and not old_col_name[i - 1].isupper() else char for i, char in enumerate(old_col_name)]).lstrip("_") 
-df = df.withColumnRenamed(old_col_name, new_col_name) output_path = '/mnt/gold/SalesLT/' + name + '/' df.write.format('delta').mode('overwrite').save(output_path)
+df = df.withColumnRenamed(old_col_name, new_col_name)
+output_path = '/mnt/gold/SalesLT/' + name + '/'
+df.write.format('delta').mode('overwrite').save(output_path)
 ```
 
 ### Automate Notebooks in ADF Pipeline
